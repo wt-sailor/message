@@ -1,39 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { getAllUsers, updateUserStatus, updateUserAppLimit, createWarning, deleteUser } from '../../services/adminService';
+import { useAppDispatch, useAppSelector } from '../../store/store';
+import { fetchAllUsers, updateStatus, updateAppLimit, sendWarning, removeUser } from '../../store/slices/adminSlice';
 import { User, UserStatus } from '../../types';
 
 export const Users: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([]);
+  const dispatch = useAppDispatch();
+  const { users, loading } = useAppSelector((state) => state.admin);
   const [filter, setFilter] = useState<UserStatus | 'ALL'>('ALL');
-  const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [appLimit, setAppLimit] = useState<string>('');
+  const [appLimit, setAppLimit] = useState<string | undefined>(undefined);
   const [warningMessage, setWarningMessage] = useState('');
 
   useEffect(() => {
-    loadUsers();
-  }, [filter]);
-
-  const loadUsers = async () => {
-    try {
-      const data = await getAllUsers(filter === 'ALL' ? undefined : filter);
-      setUsers(data);
-    } catch (error) {
-      console.error('Failed to load users:', error);
-      toast.error('Failed to load users');
-    } finally {
-      setLoading(false);
-    }
-  };
+    dispatch(fetchAllUsers(filter === 'ALL' ? undefined : filter));
+  }, [filter, dispatch]);
 
   const handleStatusChange = async (userId: number, status: UserStatus) => {
-    try {
-      await updateUserStatus(userId, status);
-      loadUsers();
+    const result = await dispatch(updateStatus({ userId, status }));
+    if (updateStatus.fulfilled.match(result)) {
       toast.success(`User ${status.toLowerCase()} successfully`);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update status');
+    } else {
+      toast.error('Failed to update status');
     }
   };
 
@@ -41,15 +29,14 @@ export const Users: React.FC = () => {
     e.preventDefault();
     if (!selectedUser) return;
 
-    try {
-      const limit = appLimit === '' ? null : parseInt(appLimit);
-      await updateUserAppLimit(selectedUser.id, limit);
+    const limit = (appLimit === '' || appLimit === undefined) ? null : parseInt(appLimit);
+    const result = await dispatch(updateAppLimit({ userId: selectedUser.id, appLimit: limit }));
+    if (updateAppLimit.fulfilled.match(result)) {
       setSelectedUser(null);
-      setAppLimit('');
-      loadUsers();
+      setAppLimit(undefined);
       toast.success('App limit updated successfully');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update app limit');
+    } else {
+      toast.error('Failed to update app limit');
     }
   };
 
@@ -57,29 +44,28 @@ export const Users: React.FC = () => {
     e.preventDefault();
     if (!selectedUser || !warningMessage) return;
 
-    try {
-      await createWarning(selectedUser.id, warningMessage);
+    const result = await dispatch(sendWarning({ userId: selectedUser.id, message: warningMessage }));
+    if (sendWarning.fulfilled.match(result)) {
       setSelectedUser(null);
       setWarningMessage('');
       toast.success('Warning sent successfully');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to send warning');
+    } else {
+      toast.error('Failed to send warning');
     }
   };
 
   const handleDeleteUser = async (user: User) => {
-    try {
-      const result = await deleteUser(user.id);
-      toast.success(`User deleted successfully. ${result.deletedAppsCount} app(s) were also deleted.`);
+    const result = await dispatch(removeUser(user.id));
+    if (removeUser.fulfilled.match(result)) {
+      toast.success(`User deleted successfully. ${result.payload.deletedAppsCount} app(s) were also deleted.`);
       setSelectedUser(null);
       setWarningMessage('');
-      loadUsers();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to delete user');
+    } else {
+      toast.error('Failed to delete user');
     }
   };
 
-  if (loading) return <div className="p-8">Loading...</div>;
+  if (loading && users.length === 0) return <div className="p-8">Loading...</div>;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -195,7 +181,7 @@ export const Users: React.FC = () => {
                 <button type="submit" className="btn-primary flex-1">Save</button>
                 <button
                   type="button"
-                  onClick={() => { setSelectedUser(null); setAppLimit(''); }}
+                  onClick={() => { setSelectedUser(null); setAppLimit(undefined); }}
                   className="btn-secondary flex-1"
                 >
                   Cancel

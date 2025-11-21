@@ -7,7 +7,37 @@ import { authLimiter } from '../middleware/rateLimiter';
 const router = Router();
 const auth = authMiddleware;
 
-// Signup
+/**
+ * @swagger
+ * /auth/signup:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *     responses:
+ *       201:
+ *         description: User created successfully
+ *       400:
+ *         description: Invalid input
+ */
 router.post('/signup', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const data = validation.validateSignup(req.body);
@@ -22,7 +52,33 @@ router.post('/signup', authLimiter, async (req: Request, res: Response, next: Ne
   }
 });
 
-// Login
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Login user
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *       401:
+ *         description: Invalid credentials
+ */
 router.post('/login', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const data = validation.validateLogin(req.body);
@@ -37,7 +93,20 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
   }
 });
 
-// Get current user
+/**
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Get current user profile
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile retrieved
+ *       401:
+ *         description: Unauthorized
+ */
 router.get('/me', auth, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = await authService.getUserById(req.user!.userId);
@@ -51,7 +120,30 @@ router.get('/me', auth, async (req: Request, res: Response, next: NextFunction) 
   }
 });
 
-// Update profile
+/**
+ * @swagger
+ * /auth/profile:
+ *   patch:
+ *     summary: Update user profile
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ */
 router.patch('/profile', auth, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { updateUserProfile } = require('../services/userService');
@@ -69,7 +161,18 @@ router.patch('/profile', auth, async (req: Request, res: Response, next: NextFun
   }
 });
 
-// Delete account
+/**
+ * @swagger
+ * /auth/account:
+ *   delete:
+ *     summary: Delete user account
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Account deleted successfully
+ */
 router.delete('/account', auth, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { deleteUserAccount } = require('../services/userService');
@@ -85,7 +188,33 @@ router.delete('/account', auth, async (req: Request, res: Response, next: NextFu
   }
 });
 
-// Change password
+/**
+ * @swagger
+ * /auth/change-password:
+ *   patch:
+ *     summary: Change user password
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - oldPassword
+ *               - newPassword
+ *             properties:
+ *               oldPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ */
 router.patch('/change-password', auth, async (req: Request, res: Response, next: NextFunction) => {
   try {
     validation.validateChangePassword(req.body);

@@ -12,6 +12,8 @@ import adminRoutes from './routes/admin.routes';
 import appsRoutes from './routes/apps.routes';
 import sdkRoutes from './routes/sdk.routes';
 import pushRoutes from './routes/push.routes';
+import swaggerUi from 'swagger-ui-express';
+import { specs } from './config/swagger';
 
 const app: Application = express();
 
@@ -53,6 +55,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/apps', appsRoutes);
 app.use('/api/sdk', sdkRoutes);
 app.use('/api/push', pushRoutes);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // 404 handler
 app.use((req, res) => {

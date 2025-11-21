@@ -1,83 +1,78 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { getAppById, rotateAppSecret, updateApp, deleteApp } from '../../services/appService';
-import { AppWithStats } from '../../types';
+import { useAppDispatch, useAppSelector } from '../../store/store';
+import { fetchAppById, updateExistingApp, rotateSecret, removeApp, clearSelectedApp } from '../../store/slices/appsSlice';
 import { CopyButton } from '../../components/common/CopyButton';
 
 export const AppDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [app, setApp] = useState<AppWithStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [rotating, setRotating] = useState(false);
+  const dispatch = useAppDispatch();
+  const { selectedApp: app, loading } = useAppSelector((state) => state.apps);
+  
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (id) loadApp();
-  }, [id]);
-
-  const loadApp = async () => {
-    try {
-      const data = await getAppById(parseInt(id!));
-      setApp(data);
-      setEditName(data.name);
-      setEditDescription(data.description || '');
-    } catch (error) {
-      console.error('Failed to load app:', error);
-      toast.error('Failed to load app details');
-    } finally {
-      setLoading(false);
+    if (id) {
+      dispatch(fetchAppById(parseInt(id)));
     }
-  };
+    return () => {
+      dispatch(clearSelectedApp());
+    };
+  }, [id, dispatch]);
+
+  useEffect(() => {
+    if (app) {
+      setEditName(app.name);
+      setEditDescription(app.description || '');
+    }
+  }, [app]);
 
   const handleRotateSecret = async () => {
     const confirmed = window.confirm('Are you sure? This will invalidate the current secret key.');
-    if (!confirmed) return;
+    if (!confirmed || !id) return;
     
-    setRotating(true);
-    try {
-      const updated = await rotateAppSecret(parseInt(id!));
-      setApp(prev => prev ? { ...prev, ...updated } : null);
+    const result = await dispatch(rotateSecret(parseInt(id)));
+    if (rotateSecret.fulfilled.match(result)) {
       toast.success('Secret key rotated successfully');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to rotate secret');
-    } finally {
-      setRotating(false);
+    } else {
+      toast.error('Failed to rotate secret');
     }
   };
 
   const handleSaveEdit = async () => {
-    try {
-      const updated = await updateApp(parseInt(id!), {
+    if (!id) return;
+    const result = await dispatch(updateExistingApp({
+      id: parseInt(id),
+      data: {
         name: editName,
         description: editDescription || undefined,
-      });
-      setApp(prev => prev ? { ...prev, ...updated } : null);
+      }
+    }));
+    if (updateExistingApp.fulfilled.match(result)) {
       setIsEditing(false);
       toast.success('App updated successfully');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update app');
+    } else {
+      toast.error('Failed to update app');
     }
   };
 
   const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await deleteApp(parseInt(id!));
+    if (!id) return;
+    const result = await dispatch(removeApp(parseInt(id)));
+    if (removeApp.fulfilled.match(result)) {
       toast.success('App deleted successfully');
       navigate('/apps');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to delete app');
-      setDeleting(false);
+    } else {
+      toast.error('Failed to delete app');
     }
   };
 
-  if (loading) return <div className="p-8">Loading...</div>;
+  if (loading && !app) return <div className="p-8">Loading...</div>;
   if (!app) return <div className="p-8">App not found</div>;
 
   const integrationCode = `// 1. Include the SDK
@@ -186,10 +181,10 @@ const response = await fetch('${window.location.origin.replace('5173', '3000')}/
           <div className="flex gap-3">
             <button
               onClick={handleDelete}
-              disabled={deleting}
+              disabled={loading}
               className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50"
             >
-              {deleting ? 'Deleting...' : 'Yes, Delete App'}
+              {loading ? 'Deleting...' : 'Yes, Delete App'}
             </button>
             <button
               onClick={() => setShowDeleteConfirm(false)}
@@ -231,8 +226,8 @@ const response = await fetch('${window.location.origin.replace('5173', '3000')}/
             <div className="flex space-x-2">
               <input value={app.secret_key} readOnly className="input flex-1" type="password" />
               <CopyButton text={app.secret_key} />
-              <button onClick={handleRotateSecret} disabled={rotating} className="btn-danger">
-                {rotating ? 'Rotating...' : 'Rotate'}
+              <button onClick={handleRotateSecret} disabled={loading} className="btn-danger">
+                {loading ? 'Rotating...' : 'Rotate'}
               </button>
             </div>
             <p className="text-xs text-gray-500 mt-1">Keep this secret! Never expose it in client-side code.</p>

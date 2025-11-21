@@ -16,7 +16,36 @@ router.get('/vapid-public-key', (req: Request, res: Response) => {
   });
 });
 
-// Register device
+/**
+ * @swagger
+ * /sdk/register-device:
+ *   post:
+ *     summary: Register a device for push notifications
+ *     tags: [SDK]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - appId
+ *               - secretKey
+ *               - subscription
+ *               - externalUserId
+ *             properties:
+ *               appId:
+ *                 type: string
+ *               secretKey:
+ *                 type: string
+ *               subscription:
+ *                 type: object
+ *               externalUserId:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Device registered successfully
+ */
 router.post('/register-device', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const data = validateRegisterDevice(req.body);

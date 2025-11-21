@@ -9,13 +9,58 @@ import { authMiddleware } from '../middleware/auth';
 import { requireRole } from '../middleware/roleCheck';
 import { UserStatus } from '../types';
 
+import { 
+  getAdminNotifications 
+} from '../services/internalNotificationService';
+
 const router = Router();
 
 // All routes require super admin
 router.use(authMiddleware);
 router.use(requireRole('SUPER_ADMIN'));
 
-// Get all users
+/**
+ * @swagger
+ * /admin/notifications:
+ *   get:
+ *     summary: Get admin notifications
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of admin notifications
+ */
+router.get('/notifications', async (req, res) => {
+  try {
+    const notifications = await getAdminNotifications();
+    res.json({
+      success: true,
+      data: notifications
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch notifications' });
+  }
+});
+
+/**
+ * @swagger
+ * /admin/users:
+ *   get:
+ *     summary: Get all users (Super Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, APPROVED, BANNED]
+ *     responses:
+ *       200:
+ *         description: List of users
+ */
 router.get('/users', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const statusFilter = req.query.status as UserStatus | undefined;

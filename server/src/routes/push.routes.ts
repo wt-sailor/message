@@ -6,7 +6,51 @@ import { pushLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
-// Send push notification
+/**
+ * @swagger
+ * /push/send:
+ *   post:
+ *     summary: Send push notification
+ *     tags: [Push Notifications]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - appId
+ *               - secretKey
+ *               - notification
+ *             properties:
+ *               appId:
+ *                 type: string
+ *               secretKey:
+ *                 type: string
+ *               notification:
+ *                 type: object
+ *                 properties:
+ *                   title:
+ *                     type: string
+ *                   body:
+ *                     type: string
+ *                   icon:
+ *                     type: string
+ *                   data:
+ *                     type: object
+ *               targets:
+ *                 type: object
+ *                 properties:
+ *                   all:
+ *                     type: boolean
+ *                   externalUserIds:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *     responses:
+ *       200:
+ *         description: Notification sent successfully
+ */
 router.post('/send', pushLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const data = validateSendPush(req.body);

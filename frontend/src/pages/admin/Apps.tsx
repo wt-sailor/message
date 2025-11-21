@@ -1,51 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getApps, createApp } from '../../services/appService';
-import { App } from '../../types';
+import { useAppDispatch, useAppSelector } from '../../store/store';
+import { fetchApps, createNewApp, clearError } from '../../store/slices/appsSlice';
 
 export const Apps: React.FC = () => {
-  const [apps, setApps] = useState<App[]>([]);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useAppDispatch();
+  const { apps, loading, error } = useAppSelector((state) => state.apps);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState('');
 
   useEffect(() => {
-    loadApps();
-  }, []);
-
-  const loadApps = async () => {
-    try {
-      const data = await getApps();
-      setApps(data);
-    } catch (error) {
-      console.error('Failed to load apps:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    dispatch(fetchApps());
+  }, [dispatch]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setCreating(true);
+    dispatch(clearError());
 
-    try {
-      await createApp({ name, description });
+    const result = await dispatch(createNewApp({ name, description }));
+    if (createNewApp.fulfilled.match(result)) {
       setShowCreateModal(false);
       setName('');
       setDescription('');
-      loadApps();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create app');
-    } finally {
-      setCreating(false);
     }
   };
 
-  if (loading) {
+  if (loading && apps.length === 0) {
     return <div className="p-8">Loading...</div>;
   }
 
@@ -116,8 +97,8 @@ export const Apps: React.FC = () => {
                 />
               </div>
               <div className="flex space-x-3">
-                <button type="submit" disabled={creating} className="btn-primary flex-1">
-                  {creating ? 'Creating...' : 'Create'}
+                <button type="submit" disabled={loading} className="btn-primary flex-1">
+                  {loading ? 'Creating...' : 'Create'}
                 </button>
                 <button
                   type="button"

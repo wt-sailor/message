@@ -5,12 +5,30 @@ import { validateCreateApp, validateUpdateApp } from '../utils/validation';
 import { authMiddleware } from '../middleware/auth';
 import { requireApproved } from '../middleware/roleCheck';
 
+/**
+ * @swagger
+ * tags:
+ *   name: Apps
+ *   description: Application management endpoints
+ */
+
 const router = Router();
 
 // All routes require authentication
 router.use(authMiddleware);
 
-// Get user's apps
+/**
+ * @swagger
+ * /apps:
+ *   get:
+ *     summary: Get user's apps
+ *     tags: [Apps]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of user's apps
+ */
 router.get('/', requireApproved, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const apps = await appService.getUserApps(req.user!.userId, req.user!.role);
@@ -24,7 +42,31 @@ router.get('/', requireApproved, async (req: Request, res: Response, next: NextF
   }
 });
 
-// Create app
+/**
+ * @swagger
+ * /apps:
+ *   post:
+ *     summary: Create a new app
+ *     tags: [Apps]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: App created successfully
+ */
 router.post('/', requireApproved, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const data = validateCreateApp(req.body);

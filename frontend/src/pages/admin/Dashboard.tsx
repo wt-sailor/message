@@ -1,28 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getApps } from '../../services/appService';
-import { App } from '../../types';
+import { useAppDispatch, useAppSelector } from '../../store/store';
+import { fetchApps } from '../../store/slices/appsSlice';
 
 export const Dashboard: React.FC = () => {
-  const [apps, setApps] = useState<App[]>([]);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useAppDispatch();
+  const { apps, loading } = useAppSelector((state) => state.apps);
 
   useEffect(() => {
-    loadApps();
-  }, []);
+    dispatch(fetchApps());
+  }, [dispatch]);
 
-  const loadApps = async () => {
-    try {
-      const data = await getApps();
-      setApps(data);
-    } catch (error) {
-      console.error('Failed to load apps:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
+  if (loading && apps.length === 0) {
     return <div className="p-8">Loading...</div>;
   }
 

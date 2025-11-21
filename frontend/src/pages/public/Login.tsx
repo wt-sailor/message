@@ -1,35 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAppDispatch, useAppSelector } from '../../store/store';
+import { loginUser, clearError } from '../../store/slices/authSlice';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { login, user } = useAuth();
+  const dispatch = useAppDispatch();
+  const { user, loading, error } = useAppSelector((state) => state.auth);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  useEffect(() => {
+    // Clear any previous errors when component mounts
+    dispatch(clearError());
+  }, [dispatch]);
 
-    try {
-      await login(email, password);
-      // Redirect based on user status after login
-      if (user?.status === 'PENDING') {
+  useEffect(() => {
+    // Redirect based on user status after successful login
+    if (user) {
+      if (user.status === 'PENDING') {
         navigate('/pending');
-      } else if (user?.status === 'BANNED') {
-        setError('Your account has been banned');
+      } else if (user.status === 'BANNED') {
+        // Error will be shown from Redux state
       } else {
         navigate('/dashboard');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed');
-    } finally {
-      setLoading(false);
     }
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    dispatch(loginUser({ email, password }));
   };
 
   return (

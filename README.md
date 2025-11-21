@@ -1,4 +1,4 @@
-# FCM Clone Platform
+# vibe-message Platform
 
 A complete Firebase Cloud Messaging–style notification platform with multi-tenant support, admin approval workflow, and external SDK integration.
 
@@ -145,7 +145,7 @@ The SDK needs to be built and linked locally so the frontend can use it.
 
 ### 1. Initial Login (Super Admin)
 The system creates a default Super Admin account on the first run.
-- **Email**: `admin@fcmclone.com` (or check `.env`)
+- **Email**: `admin@vibe-message.com` (or check `.env`)
 - **Password**: `SuperAdmin@123` (or check `.env`)
 
 ### 2. Creating a New User
@@ -159,22 +159,6 @@ The system creates a default Super Admin account on the first run.
 1. Log in with the approved user account.
 2. Go to **Apps** -> **Create New App**.
 3. Enter app details.
-4. Copy the `App ID` and `Secret Key`.
-
-### 4. Integrating the SDK
-1. Copy `frontend/public/push-sw.js` to your project's public folder.
-2. Initialize the SDK:
-   ```javascript
-   import { initNotificationClient } from 'fcm-clone-sdk';
-
-   const client = initNotificationClient({
-     baseUrl: 'http://localhost:3000/api', // Note the /api suffix
-     appId: 'YOUR_APP_ID'
-   });
-
-   // Register device
-   await client.registerDevice({
-     externalUserId: 'user_123',
      serviceWorkerPath: '/push-sw.js'
    });
    ```

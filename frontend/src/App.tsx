@@ -19,11 +19,10 @@ import { Pending } from './pages/admin/Pending';
 
 // Super admin pages
 import { Users } from './pages/super/Users';
-import { useNotifications } from './hooks/useNotifications';
+
 
 const AppContent: React.FC = () => {
-  // Initialize notifications for logged-in users
-  useNotifications();
+
 
   return (
     <BrowserRouter>

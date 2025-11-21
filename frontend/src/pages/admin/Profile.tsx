@@ -2,26 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
-import { updateProfile, deleteAccount, changePassword } from '../../services/authService';
+import { useAppDispatch, useAppSelector } from '../../store/store';
+import { updateUserProfile, changeUserPassword, deleteUserAccount } from '../../store/slices/authSlice';
 
 const Profile: React.FC = () => {
-  const { user, setUser, logout } = useAuth();
+  const { user, logout } = useAuth();
+  const dispatch = useAppDispatch();
+  const { loading } = useAppSelector((state) => state.auth);
   const navigate = useNavigate();
   
   // Profile form
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
-  const [profileLoading, setProfileLoading] = useState(false);
   
   // Password form
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordLoading, setPasswordLoading] = useState(false);
   
   // Delete account
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -32,21 +32,16 @@ const Profile: React.FC = () => {
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setProfileLoading(true);
 
-    try {
-      const updatedUser = await updateProfile(name, email);
-      setUser(updatedUser);
+    const result = await dispatch(updateUserProfile({ name, email }));
+    if (updateUserProfile.fulfilled.match(result)) {
       toast.success('Profile updated successfully!');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to update profile');
-    } finally {
-      setProfileLoading(false);
+    } else {
+      toast.error('Failed to update profile');
     }
   };
 
   const handleChangePassword = async () => {
-    
     if (newPassword !== confirmPassword) {
       toast.error('New passwords do not match');
       return;
@@ -57,32 +52,25 @@ const Profile: React.FC = () => {
       return;
     }
 
-    setPasswordLoading(true);
-
-    try {
-      await changePassword(oldPassword, newPassword);
+    const result = await dispatch(changeUserPassword({ oldPassword, newPassword }));
+    if (changeUserPassword.fulfilled.match(result)) {
       toast.success('Password changed successfully!');
       setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to change password');
-    } finally {
-      setPasswordLoading(false);
+    } else {
+      toast.error('Failed to change password');
     }
   };
 
   const handleDeleteAccount = async () => {
-    setDeleteLoading(true);
-
-    try {
-      await deleteAccount();
+    const result = await dispatch(deleteUserAccount());
+    if (deleteUserAccount.fulfilled.match(result)) {
       toast.success('Account deleted successfully');
       logout();
       navigate('/');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to delete account');
-      setDeleteLoading(false);
+    } else {
+      toast.error('Failed to delete account');
     }
   };
 
@@ -142,10 +130,10 @@ const Profile: React.FC = () => {
 
           <button
             type="submit"
-            disabled={profileLoading}
+            disabled={loading}
             className="w-full bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary-dark transition disabled:opacity-50"
           >
-            {profileLoading ? 'Updating...' : 'Update Profile'}
+            {loading ? 'Updating...' : 'Update Profile'}
           </button>
         </form>
       </div>
@@ -194,10 +182,10 @@ const Profile: React.FC = () => {
           <button
             type="button"
             onClick={handleChangePassword}
-            disabled={passwordLoading}
+            disabled={loading}
             className="w-full bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary-dark transition disabled:opacity-50"
           >
-            {passwordLoading ? 'Changing...' : 'Change Password'}
+            {loading ? 'Changing...' : 'Change Password'}
           </button>
         </div>
       </div>
@@ -225,10 +213,10 @@ const Profile: React.FC = () => {
               <div className="flex gap-3">
                 <button
                   onClick={handleDeleteAccount}
-                  disabled={deleteLoading}
+                  disabled={loading}
                   className="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition disabled:opacity-50"
                 >
-                  {deleteLoading ? 'Deleting...' : 'Yes, Delete My Account'}
+                  {loading ? 'Deleting...' : 'Yes, Delete My Account'}
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(false)}

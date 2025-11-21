@@ -12,7 +12,7 @@ const crypto = require('crypto');
 // Generate JWT secret
 const jwtSecret = crypto.randomBytes(64).toString('hex');
 
-console.log('🔧 FCM Clone - Environment Setup\n');
+console.log('🔧 vibe-message - Environment Setup\n');
 console.log('This script will create your .env file with the necessary configuration.\n');
 
 // VAPID keys instruction

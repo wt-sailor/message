@@ -76,7 +76,7 @@ export const notifySuperAdmins = async (title: string, body: string, data?: any)
         icon: '/admin-icon.png',
         data,
       },
-      { externalUserIds }
+      externalUserIds
     );
   } catch (error) {
     console.error('Failed to notify super admins:', error);
@@ -104,7 +104,7 @@ export const notifyUser = async (
         icon: '/admin-icon.png',
         data,
       },
-      { externalUserIds: [`admin_${userId}`] }
+      [`admin_${userId}`]
     );
   } catch (error) {
     console.error(`Failed to notify user ${userId}:`, error);
@@ -171,6 +171,26 @@ export const notifyUserAppLimitChanged = async (
     userId,
     'App Limit Updated',
     `Your app creation limit has been updated to: ${limitText}`,
-    { type: 'app_limit_changed', newLimit }
   );
+};
+
+/**
+ * Get recent admin notifications
+ */
+export const getAdminNotifications = async (limit: number = 20): Promise<any[]> => {
+  const internalApp = await getOrCreateInternalApp();
+  
+  const result = await query(
+    `SELECT * FROM notifications 
+     WHERE app_id = $1 
+     ORDER BY created_at DESC 
+     LIMIT $2`,
+    [internalApp.id, limit]
+  );
+
+  return result.rows.map(row => ({
+    id: row.id,
+    ...row.payload_json,
+    timestamp: row.created_at
+  }));
 };

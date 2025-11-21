@@ -1,37 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAppDispatch, useAppSelector } from '../../store/store';
+import { signupUser, clearError } from '../../store/slices/authSlice';
 
 export const Signup: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [validationError, setValidationError] = useState('');
   const navigate = useNavigate();
-  const { signup } = useAuth();
+  const dispatch = useAppDispatch();
+  const { user, loading, error } = useAppSelector((state) => state.auth);
+
+  useEffect(() => {
+    // Clear any previous errors when component mounts
+    dispatch(clearError());
+  }, [dispatch]);
+
+  useEffect(() => {
+    // Redirect to pending page after successful signup
+    if (user) {
+      navigate('/pending');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setValidationError('');
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setValidationError('Passwords do not match');
       return;
     }
 
-    setLoading(true);
-
-    try {
-      await signup(name, email, password);
-      navigate('/pending');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Signup failed');
-    } finally {
-      setLoading(false);
-    }
+    dispatch(signupUser({ name, email, password }));
   };
+
+  const displayError = validationError || error;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
@@ -43,9 +49,9 @@ export const Signup: React.FC = () => {
 
         <div className="card">
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
+            {displayError && (
               <div className="bg-red-50 text-red-600 p-3 rounded-lg">
-                {error}
+                {displayError}
               </div>
             )}
 
