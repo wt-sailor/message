@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { initNotificationClient } from '@/lib/sdk';
+import toast, { Toaster } from 'react-hot-toast';
 
 const STORAGE_KEY = 'fcm-demo-config';
 
@@ -53,6 +54,57 @@ export default function Home() {
     // Check initial permission status
     if ('Notification' in window) {
       setPermissionStatus(Notification.permission);
+    }
+
+    // Listen for in-app notifications from service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'IN_APP_NOTIFICATION') {
+          const { title, body, icon } = event.data.notification;
+          
+          // Show in-app notification using toast
+          toast.custom((t) => (
+            <div className={`${
+              t.visible ? 'animate-enter' : 'animate-leave'
+            } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
+              <div className="flex-1 w-0 p-4">
+                <div className="flex items-start">
+                  {icon && (
+                    <div className="flex-shrink-0 pt-0.5">
+                      <img
+                        className="h-10 w-10 rounded-full"
+                        src={icon}
+                        alt=""
+                      />
+                    </div>
+                  )}
+                  <div className="ml-3 flex-1">
+                    <p className="text-sm font-medium text-gray-900">
+                      {title}
+                    </p>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {body}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex border-l border-gray-200">
+                <button
+                  onClick={() => toast.dismiss(t.id)}
+                  className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          ), {
+            duration: 5000,
+            position: 'top-right',
+          });
+          
+          addLog(`🔔 In-app notification received: ${title}`);
+        }
+      });
     }
   }, []);
 
@@ -217,11 +269,41 @@ export default function Home() {
 
     try {
       addLog('🔔 Showing in-app notification...');
-      // Simulate in-app notification
-      const notification = new Notification('Self In-App Notification', {
-        body: 'This is an in-app notification for yourself!',
-        icon: '/icon.png'
+      
+      // Show in-app notification using toast
+      toast.custom((t) => (
+        <div className={`${
+          t.visible ? 'animate-enter' : 'animate-leave'
+        } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
+          <div className="flex-1 w-0 p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 pt-0.5">
+                <span className="text-2xl">🔔</span>
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  Self In-App Notification
+                </p>
+                <p className="mt-1 text-sm text-gray-500">
+                  This is an in-app notification shown while the page is visible!
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex border-l border-gray-200">
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      ), {
+        duration: 5000,
+        position: 'top-right',
       });
+      
       addLog('✅ In-app notification shown!');
     } catch (error: any) {
       addLog(`❌ Error: ${error.message}`);
@@ -272,6 +354,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+      <Toaster position="top-right" />
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-2">
@@ -491,9 +574,14 @@ export default function Home() {
               </div>
 
               <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  💡 <strong>Tip:</strong> Open this page in two browser windows with different user IDs to test cross-user notifications!
+                <p className="text-sm text-blue-800 mb-2">
+                  <strong>💡 How it works:</strong>
                 </p>
+                <ul className="text-xs text-blue-700 space-y-1 ml-4 list-disc">
+                  <li><strong>In-App:</strong> Shown as toast notification when page is visible/focused</li>
+                  <li><strong>Push:</strong> Shown as OS notification when page is hidden/unfocused</li>
+                  <li><strong>Tip:</strong> Open in two browsers with different user IDs to test cross-user notifications!</li>
+                </ul>
               </div>
             </div>
           </div>
