@@ -24,7 +24,7 @@ interface EnvConfig {
     nodeEnv: string;
   };
   cors: {
-    frontendUrl: string;
+    allowedOrigins: string[];
   };
 }
 
@@ -58,6 +58,6 @@ export const config: EnvConfig = {
     nodeEnv: getEnvVar('NODE_ENV', 'development'),
   },
   cors: {
-    frontendUrl: getEnvVar('FRONTEND_URL', 'http://localhost:5173'),
+    allowedOrigins: (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:5173').split(',').map(url => url.trim()),
   },
 };

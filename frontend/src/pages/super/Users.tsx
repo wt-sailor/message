@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { getAllUsers, updateUserStatus, updateUserAppLimit, createWarning } from '../../services/adminService';
+import toast from 'react-hot-toast';
+import { getAllUsers, updateUserStatus, updateUserAppLimit, createWarning, deleteUser } from '../../services/adminService';
 import { User, UserStatus } from '../../types';
 
 export const Users: React.FC = () => {
@@ -20,6 +21,7 @@ export const Users: React.FC = () => {
       setUsers(data);
     } catch (error) {
       console.error('Failed to load users:', error);
+      toast.error('Failed to load users');
     } finally {
       setLoading(false);
     }
@@ -29,8 +31,9 @@ export const Users: React.FC = () => {
     try {
       await updateUserStatus(userId, status);
       loadUsers();
-    } catch (error) {
-      alert('Failed to update status');
+      toast.success(`User ${status.toLowerCase()} successfully`);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update status');
     }
   };
 
@@ -44,8 +47,9 @@ export const Users: React.FC = () => {
       setSelectedUser(null);
       setAppLimit('');
       loadUsers();
-    } catch (error) {
-      alert('Failed to update app limit');
+      toast.success('App limit updated successfully');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update app limit');
     }
   };
 
@@ -57,9 +61,21 @@ export const Users: React.FC = () => {
       await createWarning(selectedUser.id, warningMessage);
       setSelectedUser(null);
       setWarningMessage('');
-      alert('Warning sent successfully');
-    } catch (error) {
-      alert('Failed to send warning');
+      toast.success('Warning sent successfully');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to send warning');
+    }
+  };
+
+  const handleDeleteUser = async (user: User) => {
+    try {
+      const result = await deleteUser(user.id);
+      toast.success(`User deleted successfully. ${result.deletedAppsCount} app(s) were also deleted.`);
+      setSelectedUser(null);
+      setWarningMessage('');
+      loadUsers();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete user');
     }
   };
 
@@ -140,6 +156,15 @@ export const Users: React.FC = () => {
                     >
                       Warn
                     </button>
+                    <button
+                      onClick={() => {
+                        setSelectedUser(user);
+                        setWarningMessage('DELETE_CONFIRM');
+                      }}
+                      className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -182,7 +207,7 @@ export const Users: React.FC = () => {
       )}
 
       {/* Warning Modal */}
-      {selectedUser && warningMessage !== undefined && appLimit === undefined && (
+      {selectedUser && warningMessage !== undefined && warningMessage !== 'DELETE_CONFIRM' && appLimit === undefined && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h2 className="text-2xl font-bold mb-4">Send Warning to {selectedUser.name}</h2>
@@ -208,6 +233,35 @@ export const Users: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete User Modal */}
+      {selectedUser && warningMessage === 'DELETE_CONFIRM' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 className="text-2xl font-bold mb-4 text-red-600">Delete User?</h2>
+            <p className="text-gray-700 mb-4">
+              Are you sure you want to delete <strong>{selectedUser.name}</strong>?
+            </p>
+            <p className="text-red-600 font-semibold mb-4">
+              This will permanently delete the user and all their apps. This action cannot be undone.
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => handleDeleteUser(selectedUser)}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex-1"
+              >
+                Yes, Delete User
+              </button>
+              <button
+                onClick={() => { setSelectedUser(null); setWarningMessage(''); }}
+                className="btn-secondary flex-1"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

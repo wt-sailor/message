@@ -78,4 +78,20 @@ router.post('/users/:id/warn', async (req: Request, res: Response, next: NextFun
   }
 });
 
+// Delete user (super admin only)
+router.delete('/users/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    const result = await userService.deleteUserBySuperAdmin(userId, req.user!.userId);
+
+    res.json({
+      success: true,
+      message: 'User deleted successfully',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

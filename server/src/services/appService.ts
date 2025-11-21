@@ -192,7 +192,7 @@ export const deleteApp = async (
   userId: number,
   role: UserRole
 ): Promise<void> => {
-  let queryText = 'UPDATE apps SET is_active = false WHERE id = $1';
+  let queryText = 'DELETE FROM apps WHERE id = $1';
   const params: any[] = [appId];
 
   // Regular admin can only delete their own apps

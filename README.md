@@ -22,215 +22,198 @@ message/
 └── sdk/             # External JavaScript SDK
 ```
 
-## 🛠️ Setup Instructions
+## 🛠️ Zero to Hero Setup Guide
+
+Follow these steps to set up the project from scratch.
 
 ### Prerequisites
 
-- Node.js 18+
-- PostgreSQL 14+
-- npm or yarn
+- **Node.js** (v18 or higher)
+- **PostgreSQL** (v14 or higher)
+- **npm** (comes with Node.js)
 
-### 1. Backend Setup
+---
 
-```bash
-cd server
+### Step 1: Database Setup
 
-# Install dependencies
-npm install
+1. Ensure PostgreSQL is running.
+2. Create the database:
+   ```bash
+   # Using terminal
+   createdb messagedb
 
-# Generate VAPID keys
-npx web-push generate-vapid-keys
+   # OR using psql
+   psql -c "CREATE DATABASE messagedb;"
+   ```
 
-# Copy and configure environment
-cp .env.example .env
-# Edit .env with your database URL, JWT secret, VAPID keys, and super admin credentials
+---
 
-# Setup database
-npm run db:setup
+### Step 2: Backend Setup
 
-# Start development server
-npm run dev
-```
+1. Navigate to the server directory:
+   ```bash
+   cd server
+   ```
 
-The backend will run on `http://localhost:3000`
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-### 2. Frontend Setup
+3. Configure Environment Variables:
+   - Copy the example file:
+     ```bash
+     cp .env.example .env
+     ```
+   - Open `.env` and update the following:
+     - `DATABASE_URL`: `postgresql://your_user:your_password@localhost:5432/messagedb`
+     - `JWT_SECRET`: Generate a random string (e.g., `openssl rand -hex 32`)
+     - `VAPID_KEYS`: Run `npx web-push generate-vapid-keys` and paste the output.
 
-```bash
-cd frontend
+4. Initialize Database Schema:
+   ```bash
+   npm run db:setup
+   ```
 
-# Install dependencies
-npm install
+5. Start the Server:
+   ```bash
+   npm run dev
+   ```
+   Server will run on `http://localhost:3000`.
 
-# Copy and configure environment (optional)
-cp .env.example .env
+---
 
-# Start development server
-npm run dev
-```
+### Step 3: SDK Setup
 
-The frontend will run on `http://localhost:5173`
+The SDK needs to be built and linked locally so the frontend can use it.
 
-### 3. SDK Setup
+1. Open a new terminal and navigate to the sdk directory:
+   ```bash
+   cd sdk
+   ```
 
-```bash
-cd sdk
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-# Install dependencies
-npm install
+3. Build the SDK:
+   ```bash
+   npm run build
+   ```
 
-# Build SDK
-npm run build
-```
+4. Create a local link:
+   ```bash
+   npm link
+   ```
 
-The built SDK will be in `sdk/dist/`
+---
+
+### Step 4: Frontend Setup
+
+1. Open a new terminal and navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Link the local SDK:
+   ```bash
+   npm link fcm-clone-sdk
+   ```
+   *Note: If you see type errors, you may need to restart your VS Code or TypeScript server.*
+
+4. Configure Environment Variables (Optional):
+   ```bash
+   cp .env.example .env
+   ```
+   Ensure `VITE_API_URL=http://localhost:3000/api`.
+
+5. Start the Frontend:
+   ```bash
+   npm run dev
+   ```
+   Frontend will run on `http://localhost:5173`.
+
+---
 
 ## 📖 Usage Guide
 
-### For Platform Admins
+### 1. Initial Login (Super Admin)
+The system creates a default Super Admin account on the first run.
+- **Email**: `admin@fcmclone.com` (or check `.env`)
+- **Password**: `SuperAdmin@123` (or check `.env`)
 
-1. **Sign Up**: Create an account at `http://localhost:5173/signup`
-2. **Wait for Approval**: Super admin must approve your account
-3. **Create App**: Once approved, create an app to get credentials
-4. **Get Credentials**: Copy your `appId` and `secretKey` from the app details page
+### 2. Creating a New User
+1. Go to `http://localhost:5173/signup`.
+2. Create a new account.
+3. **Important**: New accounts are `PENDING` by default.
+4. Log in as Super Admin (`admin@fcmclone.com`).
+5. Go to **Users** section and click **Approve** on the new user.
 
-### For Third-Party App Integration
+### 3. Creating an App
+1. Log in with the approved user account.
+2. Go to **Apps** -> **Create New App**.
+3. Enter app details.
+4. Copy the `App ID` and `Secret Key`.
 
-#### Frontend Integration
-
-1. **Copy Service Worker**: Copy `sdk/examples/push-sw.js` to your `public/` directory
-
-2. **Install SDK** (when published):
-   ```bash
-   npm install fcm-clone-sdk
-   ```
-
-3. **Initialize and Register**:
+### 4. Integrating the SDK
+1. Copy `frontend/public/push-sw.js` to your project's public folder.
+2. Initialize the SDK:
    ```javascript
    import { initNotificationClient } from 'fcm-clone-sdk';
 
    const client = initNotificationClient({
-     baseUrl: 'http://localhost:3000',
-     appId: 'your-app-id'
+     baseUrl: 'http://localhost:3000/api', // Note the /api suffix
+     appId: 'YOUR_APP_ID'
    });
 
-   // When user logs in
+   // Register device
    await client.registerDevice({
-     externalUserId: 'user-123',
+     externalUserId: 'user_123',
      serviceWorkerPath: '/push-sw.js'
    });
    ```
 
-#### Backend Integration
+---
 
-Send push notifications from your server:
+## 🔧 Troubleshooting
 
-```javascript
-const response = await fetch('http://localhost:3000/api/push/send', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    appId: 'your-app-id',
-    secretKey: 'your-secret-key',
-    notification: {
-      title: 'Hello!',
-      body: 'This is a push notification',
-      icon: '/icon.png',
-      click_action: 'https://your-app.com'
-    },
-    targets: {
-      externalUserIds: ['user-123'] // or { all: true }
-    }
-  })
-});
-```
+### SDK 404 Error (vapid-public-key)
+- Ensure your SDK initialization URL has the `/api` suffix: `http://localhost:3000/api`.
+- Ensure the backend server is running.
 
-## 🔑 Default Super Admin
+### Notifications Not Arriving
+- Check if the user ID matches. If you register as `user_123`, send the notification to `user_123`.
+- Check the browser console for "Notification permission denied".
+- Ensure the Service Worker is registered correctly.
 
-The super admin account is created automatically on first run using credentials from `.env`:
+### "Profile" Page Redirects to Home
+- This usually means the route is missing in `App.tsx`. We fixed this in the latest update.
 
-- Email: `SUPER_ADMIN_EMAIL` from .env
-- Password: `SUPER_ADMIN_PASSWORD` from .env
-
-## 📚 API Documentation
-
-### Authentication Endpoints
-
-- `POST /auth/signup` - Register new admin user
-- `POST /auth/login` - Login and get JWT token
-- `GET /auth/me` - Get current user info
-
-### Super Admin Endpoints
-
-- `GET /admin/users` - List all users
-- `PATCH /admin/users/:id/status` - Approve/ban users
-- `PATCH /admin/users/:id/app-limit` - Set app creation limit
-- `POST /admin/users/:id/warn` - Send warning to user
-
-### App Management Endpoints
-
-- `GET /apps` - List user's apps
-- `POST /apps` - Create new app
-- `GET /apps/:id` - Get app details with stats
-- `PATCH /apps/:id` - Update app info
-- `POST /apps/:id/rotate-secret` - Rotate secret key
-- `DELETE /apps/:id` - Deactivate app
-
-### SDK Integration Endpoints
-
-- `GET /sdk/vapid-public-key` - Get VAPID public key
-- `POST /sdk/register-device` - Register device token
-- `POST /sdk/unregister-device` - Unregister device
-
-### Push Notification Endpoint
-
-- `POST /api/push/send` - Send push notification (requires appId + secretKey)
+---
 
 ## 🏗️ Architecture
 
 ### Backend
-
 - **Framework**: Express.js with TypeScript
-- **Database**: PostgreSQL with raw SQL queries (no ORM)
-- **Authentication**: JWT-based with bcrypt password hashing
-- **Push Notifications**: web-push library with VAPID authentication
-- **Rate Limiting**: Express rate limiter
+- **Database**: PostgreSQL (Raw SQL)
+- **Auth**: JWT + bcrypt
+- **Push**: `web-push` library
 
 ### Frontend
-
-- **Framework**: React 18 with TypeScript
-- **Build Tool**: Vite
-- **Routing**: React Router v6
+- **Framework**: React + Vite
 - **Styling**: Tailwind CSS
-- **HTTP Client**: Axios with interceptors
+- **State**: Context API
 
 ### SDK
-
-- **Language**: TypeScript
-- **Build**: Rollup (ESM + CommonJS)
-- **Browser APIs**: Service Worker, Push API, Notification API
-
-## 🔒 Security Considerations
-
-- **Secret Keys**: Never expose `secretKey` in client-side code
-- **HTTPS Required**: Push notifications require HTTPS in production
-- **JWT Tokens**: Stored in localStorage (consider httpOnly cookies for production)
-- **Rate Limiting**: Basic in-memory rate limiting (use Redis for production)
-- **VAPID Keys**: Keep private key secure, never commit to version control
-
-## 🚀 Production Deployment
-
-1. **Database**: Use managed PostgreSQL (AWS RDS, DigitalOcean, etc.)
-2. **Backend**: Deploy to Node.js hosting (Heroku, DigitalOcean, AWS, etc.)
-3. **Frontend**: Build and deploy to static hosting (Vercel, Netlify, etc.)
-4. **Environment**: Update all URLs and secrets for production
-5. **HTTPS**: Ensure all services use HTTPS
-6. **Rate Limiting**: Consider Redis-based rate limiting for scalability
+- **Type**: Universal JavaScript Module (UMD/ESM)
+- **Features**: Service Worker management, VAPID key handling
 
 ## 📝 License
 
 MIT
-
-## 🤝 Contributing
-
-This is a demonstration project. Feel free to fork and modify for your needs.

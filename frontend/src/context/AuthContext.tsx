@@ -4,6 +4,7 @@ import * as authService from '../services/authService';
 
 interface AuthContextType {
   user: User | null;
+  setUser: (user: User) => void;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
@@ -38,13 +39,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const login = async (email: string, password: string) => {
-    const response: AuthResponse = await authService.login({ email, password });
+    const response: AuthResponse = await authService.login(email, password);
     localStorage.setItem('token', response.token);
     setUser(response.user);
   };
 
   const signup = async (name: string, email: string, password: string) => {
-    const response: AuthResponse = await authService.signup({ name, email, password });
+    const response: AuthResponse = await authService.signup(name, email, password);
     localStorage.setItem('token', response.token);
     setUser(response.user);
   };
@@ -60,7 +61,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, setUser, loading, login, signup, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

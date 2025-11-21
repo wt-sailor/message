@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { NotificationBell } from '../common/NotificationBell';
 
 export const Header: React.FC = () => {
   const { user, logout } = useAuth();
@@ -29,6 +30,10 @@ export const Header: React.FC = () => {
                 )}
                 <Link to="/docs" className="text-gray-700 hover:text-primary-600">
                   Docs
+                </Link>
+                <NotificationBell />
+                <Link to="/profile" className="text-gray-700 hover:text-primary-600">
+                  Profile
                 </Link>
                 <button onClick={logout} className="btn-secondary">
                   Logout

@@ -14,15 +14,19 @@ import { Docs } from './pages/public/Docs';
 import { Dashboard } from './pages/admin/Dashboard';
 import { Apps } from './pages/admin/Apps';
 import { AppDetails } from './pages/admin/AppDetails';
+import Profile from './pages/admin/Profile';
 import { Pending } from './pages/admin/Pending';
 
 // Super admin pages
 import { Users } from './pages/super/Users';
+import { useNotifications } from './hooks/useNotifications';
 
-function App() {
+const AppContent: React.FC = () => {
+  // Initialize notifications for logged-in users
+  useNotifications();
+
   return (
-    <AuthProvider>
-      <BrowserRouter>
+    <BrowserRouter>
         <div className="min-h-screen bg-gray-50">
           <Header />
           <Routes>
@@ -57,6 +61,12 @@ function App() {
               </ProtectedRoute>
             } />
 
+            <Route path="/profile" element={
+              <ProtectedRoute requireApproved>
+                <Profile />
+              </ProtectedRoute>
+            } />
+
             {/* Super admin routes */}
             <Route path="/super/users" element={
               <ProtectedRoute requireApproved>
@@ -69,8 +79,15 @@ function App() {
           </Routes>
         </div>
       </BrowserRouter>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
     </AuthProvider>
   );
-}
+};
 
 export default App;

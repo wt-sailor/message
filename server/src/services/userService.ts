@@ -8,7 +8,7 @@ import {
   CreateWarningRequest,
   Warning,
 } from '../types';
-import { NotFoundError, ForbiddenError } from '../utils/errors';
+import { NotFoundError, ForbiddenError, ValidationError } from '../utils/errors';
 
 const userToResponse = (user: User): UserResponse => {
   const { password_hash, ...userResponse } = user;
@@ -46,7 +46,25 @@ export const updateUserStatus = async (
     throw new NotFoundError('User not found or cannot modify super admin');
   }
 
-  return userToResponse(result.rows[0]);
+  const user = result.rows[0];
+
+  // Send notification to user
+  const {
+    notifyUserApproved,
+    notifyUserBanned,
+  } = require('./internalNotificationService');
+
+  if (data.status === 'APPROVED') {
+    notifyUserApproved(userId, user.name).catch((err) =>
+      console.error('Failed to send approval notification:', err)
+    );
+  } else if (data.status === 'BANNED') {
+    notifyUserBanned(userId).catch((err) =>
+      console.error('Failed to send ban notification:', err)
+    );
+  }
+
+  return userToResponse(user);
 };
 
 export const updateUserAppLimit = async (
@@ -64,6 +82,12 @@ export const updateUserAppLimit = async (
   if (result.rows.length === 0) {
     throw new NotFoundError('User not found or cannot modify super admin');
   }
+
+  // Notify user about app limit change
+  const { notifyUserAppLimitChanged } = require('./internalNotificationService');
+  notifyUserAppLimitChanged(userId, data.appLimit).catch((err) =>
+    console.error('Failed to send app limit notification:', err)
+  );
 
   return userToResponse(result.rows[0]);
 };
@@ -90,6 +114,12 @@ export const createWarning = async (
     [userId, data.message, createdBy]
   );
 
+  // Notify user about warning
+  const { notifyUserWarned } = require('./internalNotificationService');
+  notifyUserWarned(userId, data.message).catch((err) =>
+    console.error('Failed to send warning notification:', err)
+  );
+
   return result.rows[0];
 };
 
@@ -100,4 +130,113 @@ export const getUserWarnings = async (userId: number): Promise<Warning[]> => {
   );
 
   return result.rows;
+};
+
+export const updateUserProfile = async (
+  userId: number,
+  name?: string,
+  email?: string
+): Promise<UserResponse> => {
+  // Check if email is already taken by another user
+  if (email) {
+    const emailCheck = await query(
+      'SELECT id FROM users WHERE email = $1 AND id != $2',
+      [email, userId]
+    );
+
+    if (emailCheck.rows.length > 0) {
+      throw new ForbiddenError('Email is already in use');
+    }
+  }
+
+  const updates: string[] = [];
+  const params: any[] = [];
+  let paramCount = 1;
+
+  if (name) {
+    updates.push(`name = $${paramCount++}`);
+    params.push(name);
+  }
+
+  if (email) {
+    updates.push(`email = $${paramCount++}`);
+    params.push(email);
+  }
+
+  if (updates.length === 0) {
+    throw new ValidationError('At least one field (name or email) must be provided');
+  }
+
+  updates.push(`updated_at = CURRENT_TIMESTAMP`);
+  params.push(userId);
+
+  const result = await query(
+    `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`,
+    params
+  );
+
+  if (result.rows.length === 0) {
+    throw new NotFoundError('User not found');
+  }
+
+  return userToResponse(result.rows[0]);
+};
+
+export const deleteUserAccount = async (userId: number): Promise<void> => {
+  // Prevent super admin from deleting their own account
+  const userCheck = await query(
+    'SELECT role FROM users WHERE id = $1',
+    [userId]
+  );
+
+  if (userCheck.rows.length === 0) {
+    throw new NotFoundError('User not found');
+  }
+
+  if (userCheck.rows[0].role === 'SUPER_ADMIN') {
+    throw new ForbiddenError('Super admin cannot delete their own account');
+  }
+
+  // Delete user (cascade will handle apps, devices, etc.)
+  await query('DELETE FROM users WHERE id = $1', [userId]);
+};
+
+export const deleteUserBySuperAdmin = async (
+  targetUserId: number,
+  superAdminId: number
+): Promise<{ deletedAppsCount: number }> => {
+  // Verify super admin
+  const adminCheck = await query(
+    'SELECT role FROM users WHERE id = $1',
+    [superAdminId]
+  );
+
+  if (adminCheck.rows.length === 0 || adminCheck.rows[0].role !== 'SUPER_ADMIN') {
+    throw new ForbiddenError('Only super admin can delete users');
+  }
+
+  // Prevent deleting another super admin
+  const targetCheck = await query(
+    'SELECT role FROM users WHERE id = $1',
+    [targetUserId]
+  );
+
+  if (targetCheck.rows.length === 0) {
+    throw new NotFoundError('User not found');
+  }
+
+  if (targetCheck.rows[0].role === 'SUPER_ADMIN') {
+    throw new ForbiddenError('Cannot delete super admin accounts');
+  }
+
+  // Get count of apps that will be deleted
+  const appsCount = await query(
+    'SELECT COUNT(*) as count FROM apps WHERE user_id = $1',
+    [targetUserId]
+  );
+
+  // Delete user (cascade will handle everything)
+  await query('DELETE FROM users WHERE id = $1', [targetUserId]);
+
+  return { deletedAppsCount: parseInt(appsCount.rows[0].count) };
 };

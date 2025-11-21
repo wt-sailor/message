@@ -17,7 +17,13 @@ const app: Application = express();
 
 // Middleware
 app.use(cors({
-  origin: config.cors.frontendUrl,
+  origin: (origin, callback) => {
+    if (!origin || config.cors.allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json());
@@ -36,10 +42,11 @@ app.get('/health', (req, res) => {
 app.use('/api', apiLimiter);
 
 // Routes
-app.use('/auth', authRoutes);
-app.use('/admin', adminRoutes);
-app.use('/apps', appsRoutes);
-app.use('/sdk', sdkRoutes);
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/apps', appsRoutes);
+app.use('/api/sdk', sdkRoutes);
 app.use('/api/push', pushRoutes);
 
 // 404 handler
@@ -67,7 +74,7 @@ const startServer = async () => {
     app.listen(config.server.port, () => {
       console.log(`🚀 Server running on port ${config.server.port}`);
       console.log(`📝 Environment: ${config.server.nodeEnv}`);
-      console.log(`🌐 CORS enabled for: ${config.cors.frontendUrl}`);
+      console.log(`🌐 CORS enabled for: ${config.cors.allowedOrigins.join(', ')}`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

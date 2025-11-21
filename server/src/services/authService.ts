@@ -10,7 +10,7 @@ import {
   AuthResponse,
   JwtPayload,
 } from '../types';
-import { ConflictError, UnauthorizedError, NotFoundError } from '../utils/errors';
+import { ConflictError, UnauthorizedError, NotFoundError, ValidationError } from '../utils/errors';
 
 const SALT_ROUNDS = 10;
 
@@ -56,6 +56,12 @@ export const signup = async (data: SignupRequest): Promise<AuthResponse> => {
 
   const user: User = result.rows[0];
   const token = generateToken(user);
+
+  // Notify super admin about new signup
+  const { notifySuperAdminNewUser } = require('./internalNotificationService');
+  notifySuperAdminNewUser(name, email).catch((err: any) => 
+    console.error('Failed to send new user notification:', err)
+  );
 
   return {
     token,
@@ -105,6 +111,49 @@ export const getUserById = async (userId: number): Promise<UserResponse> => {
 
   const user: User = result.rows[0];
   return userToResponse(user);
+};
+
+export const deleteAccount = async (userId: number): Promise<void> => {
+  // Prevent super admins from deleting their own accounts
+  const user = await getUserById(userId);
+  if (user.role === 'SUPER_ADMIN') {
+    throw new ValidationError('Super admins cannot delete their own accounts');
+  }
+
+  await query('DELETE FROM users WHERE id = $1', [userId]);
+};
+
+export const changePassword = async (
+  userId: number,
+  oldPassword: string,
+  newPassword: string
+): Promise<void> => {
+  // Get user with password hash
+  const result = await query(
+    'SELECT * FROM users WHERE id = $1',
+    [userId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new NotFoundError('User not found');
+  }
+
+  const user: User = result.rows[0];
+
+  // Verify old password
+  const isValid = await bcrypt.compare(oldPassword, user.password_hash);
+  if (!isValid) {
+    throw new ValidationError('Current password is incorrect');
+  }
+
+  // Hash new password
+  const newPasswordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+  // Update password
+  await query(
+    'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+    [newPasswordHash, userId]
+  );
 };
 
 export const initializeSuperAdmin = async (): Promise<void> => {

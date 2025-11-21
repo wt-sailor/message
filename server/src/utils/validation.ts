@@ -26,9 +26,17 @@ const isStrongPassword = (password: string): boolean => {
 };
 
 export const validateSignup = (data: any): SignupRequest => {
-  const { name, email, password } = data;
+  let { name, email, password } = data;
 
-  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+  if (name && typeof name === 'string') {
+    name = name.trim();
+  }
+
+  if (email && typeof email === 'string') {
+    email = email.trim();
+  }
+
+  if (!name || name.length === 0) {
     throw new ValidationError('Name is required');
   }
 
@@ -42,11 +50,15 @@ export const validateSignup = (data: any): SignupRequest => {
     );
   }
 
-  return { name: name.trim(), email: email.toLowerCase().trim(), password };
+  return { name, email: email.toLowerCase(), password };
 };
 
 export const validateLogin = (data: any): LoginRequest => {
-  const { email, password } = data;
+  let { email, password } = data;
+
+  if (email && typeof email === 'string') {
+    email = email.trim();
+  }
 
   if (!email || !isValidEmail(email)) {
     throw new ValidationError('Valid email is required');
@@ -56,7 +68,7 @@ export const validateLogin = (data: any): LoginRequest => {
     throw new ValidationError('Password is required');
   }
 
-  return { email: email.toLowerCase().trim(), password };
+  return { email: email.toLowerCase(), password };
 };
 
 export const validateCreateApp = (data: any): CreateAppRequest => {
@@ -188,4 +200,53 @@ export const validateCreateWarning = (data: any): CreateWarningRequest => {
   }
 
   return { message: message.trim() };
+};
+
+export const validateUpdateProfile = (data: any): { name?: string; email?: string } => {
+  let { name, email } = data;
+  const updates: { name?: string; email?: string } = {};
+
+  if (name !== undefined) {
+    if (typeof name === 'string') {
+      name = name.trim();
+    }
+    if (typeof name !== 'string' || name.length === 0) {
+      throw new ValidationError('Name must be a non-empty string');
+    }
+    updates.name = name;
+  }
+
+  if (email !== undefined) {
+    if (typeof email === 'string') {
+      email = email.trim();
+    }
+    if (!isValidEmail(email)) {
+      throw new ValidationError('Valid email is required');
+    }
+    updates.email = email.toLowerCase();
+  }
+
+  if (Object.keys(updates).length === 0) {
+    throw new ValidationError('At least one field (name or email) must be provided');
+  }
+
+  return updates;
+};
+
+export const validateChangePassword = (data: any): void => {
+  if (!data.oldPassword || typeof data.oldPassword !== 'string') {
+    throw new ValidationError('Current password is required');
+  }
+
+  if (!data.newPassword || typeof data.newPassword !== 'string') {
+    throw new ValidationError('New password is required');
+  }
+
+  if (data.newPassword.length < 6) {
+    throw new ValidationError('New password must be at least 6 characters');
+  }
+
+  if (data.oldPassword === data.newPassword) {
+    throw new ValidationError('New password must be different from current password');
+  }
 };
