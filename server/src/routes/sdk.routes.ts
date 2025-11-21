@@ -1,0 +1,78 @@
+import { Router, Request, Response, NextFunction } from 'express';
+import * as appService from '../services/appService';
+import * as deviceService from '../services/deviceService';
+import { validateRegisterDevice, validateUnregisterDevice } from '../utils/validation';
+import { getVapidPublicKey } from '../utils/webPush';
+
+const router = Router();
+
+// Get VAPID public key (needed for client-side push subscription)
+router.get('/vapid-public-key', (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    data: {
+      publicKey: getVapidPublicKey(),
+    },
+  });
+});
+
+// Register device
+router.post('/register-device', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = validateRegisterDevice(req.body);
+
+    // Validate app exists and is active
+    const app = await appService.getAppByPublicId(data.appId);
+    if (!app) {
+      return res.status(404).json({
+        success: false,
+        message: 'App not found or inactive',
+      });
+    }
+
+    // Register device
+    const device = await deviceService.registerDevice(
+      app.id,
+      data.externalUserId,
+      data.subscription
+    );
+
+    res.status(201).json({
+      success: true,
+      data: {
+        deviceId: device.id,
+        message: 'Device registered successfully',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Unregister device
+router.post('/unregister-device', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = validateUnregisterDevice(req.body);
+
+    // Validate app exists
+    const app = await appService.getAppByPublicId(data.appId);
+    if (!app) {
+      return res.status(404).json({
+        success: false,
+        message: 'App not found',
+      });
+    }
+
+    // Unregister device
+    await deviceService.unregisterDevice(app.id, data.externalUserId);
+
+    res.json({
+      success: true,
+      message: 'Device unregistered successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+export default router;

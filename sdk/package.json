@@ -1,0 +1,29 @@
+{
+    "name": "fcm-clone-sdk",
+    "version": "1.0.0",
+    "description": "JavaScript SDK for FCM Clone push notifications",
+    "main": "dist/index.js",
+    "module": "dist/index.esm.js",
+    "types": "dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "rollup -c",
+        "dev": "rollup -c -w"
+    },
+    "keywords": [
+        "push",
+        "notifications",
+        "fcm",
+        "web-push"
+    ],
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+        "@rollup/plugin-typescript": "^11.1.5",
+        "rollup": "^4.9.1",
+        "tslib": "^2.6.2",
+        "typescript": "^5.3.3"
+    }
+}

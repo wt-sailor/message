@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FCM Clone SDK Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>FCM Clone SDK Integration Example</h1>
+
+    <div>
+        <h2>Configuration</h2>
+        <label>Base URL: <input type="text" id="baseUrl" value="http://localhost:3000"
+                style="width: 300px;"></label><br>
+        <label>App ID: <input type="text" id="appId" value="your-app-id" style="width: 300px;"></label><br>
+        <label>User ID: <input type="text" id="userId" value="user-123" style="width: 300px;"></label><br>
+    </div>
+
+    <div>
+        <h2>Actions</h2>
+        <button onclick="registerDevice()">Register Device</button>
+        <button onclick="unregisterDevice()">Unregister Device</button>
+    </div>
+
+    <div>
+        <h2>Status</h2>
+        <div id="status"></div>
+    </div>
+
+    <div>
+        <h2>Integration Code</h2>
+        <pre><code>// 1. Install SDK
+npm install fcm-clone-sdk
+
+// 2. Import and initialize
+import { initNotificationClient } from 'fcm-clone-sdk';
+
+const client = initNotificationClient({
+  baseUrl: 'http://localhost:3000',
+  appId: 'your-app-id'
+});
+
+// 3. Register device
+await client.registerDevice({
+  externalUserId: 'user-123',
+  serviceWorkerPath: '/push-sw.js'
+});
+
+// 4. Unregister device
+await client.unregisterDevice('user-123');</code></pre>
+    </div>
+
+    <!-- Include SDK (in production, use npm package) -->
+    <script type="module">
+        import { initNotificationClient } from '../dist/index.esm.js';
+
+        let client;
+
+        window.registerDevice = async function () {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const appId = document.getElementById('appId').value;
+            const userId = document.getElementById('userId').value;
+            const status = document.getElementById('status');
+
+            try {
+                status.innerHTML = '<p>Initializing...</p>';
+
+                client = initNotificationClient({ baseUrl, appId });
+
+                status.innerHTML = '<p>Requesting permission and registering...</p>';
+
+                await client.registerDevice({
+                    externalUserId: userId,
+                    serviceWorkerPath: '/push-sw.js'
+                });
+
+                status.innerHTML = '<p class="success">✓ Device registered successfully!</p>';
+            } catch (error) {
+                status.innerHTML = `<p class="error">✗ Error: ${error.message}</p>`;
+                console.error(error);
+            }
+        };
+
+        window.unregisterDevice = async function () {
+            const userId = document.getElementById('userId').value;
+            const status = document.getElementById('status');
+
+            if (!client) {
+                status.innerHTML = '<p class="error">Please register first</p>';
+                return;
+            }
+
+            try {
+                status.innerHTML = '<p>Unregistering...</p>';
+
+                await client.unregisterDevice(userId);
+
+                status.innerHTML = '<p class="success">✓ Device unregistered successfully!</p>';
+            } catch (error) {
+                status.innerHTML = `<p class="error">✗ Error: ${error.message}</p>`;
+                console.error(error);
+            }
+        };
+
+        // Listen for silent push messages
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data.type === 'SILENT_PUSH') {
+                    console.log('Silent push data received:', event.data.data);
+                    document.getElementById('status').innerHTML +=
+                        `<p class="success">Silent push received: ${JSON.stringify(event.data.data)}</p>`;
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
